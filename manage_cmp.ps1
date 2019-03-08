@@ -1,6 +1,5 @@
 # Script to Manage Cloud Management Platform (CMP) Environment
 # Created by Ken Gould (Dell EMC)
-# Evolution of vSANClusterMaintenance and SnapshotVM scripts created by Brian O'Connell (Dell EMC)
 # Provided with zero warranty! Please test before using in anger!
 # Version 15
 # DO NOT USE THIS SCRIPT WITH OUT CHANGING THE $vAppName PARAMTER TO YOUR VAPP !!!!
