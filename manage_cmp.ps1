@@ -1,4 +1,4 @@
-# Script to Manage VRS Environment
+# Script to Manage Cloud Management Platform (CMP) Environment
 # Created by Ken Gould (Dell EMC)
 # Evolution of vSANClusterMaintenance and SnapshotVM scripts created by Brian O'Connell (Dell EMC)
 # Provided with zero warranty! Please test before using in anger!
@@ -23,15 +23,15 @@
 $vAppName = "ChangeMe"
 
 #Infrastructure Paramters
-$vcenter_fqdn = "vcs01.domain.local"
+$vcenter_fqdn = "vc01.domain.local"
 $vcenter_user = "administrator@vsphere.local"
-$vcenter_password = "Password123!"
+$vcenter_password = "VMwar3!!"
 $lab_vcenter = "drmlab-vc01.infra.lab.local"
 $lab_ci ="10.103.244.121"
-$lab_username = "lab\gouldk"
+$lab_username = "lab\administrator"
 $ci_username = "Administrator"
 $ave_username = "admin"
-$ave_password = "Password123_"
+$ave_password = "VMwar3_"
 
 # To change the user, alter the user in $lab_username or $ci_username and create a new credentials file using the following syntax (providing the filename you wish to store it in)
 # Note the 'key' parameter is important to ensure decryption works.
@@ -43,14 +43,14 @@ $ci_password_file = "c:\scripts\ci_password.txt"
 
 #Cluster Startup/Shutdown Parameters
 $cluster = "MARVIN-Virtual-SAN-cluster"
-$vcs01_platform_vms = @("PSC01", "VCS01")
-$vcs01_cluster_hosts = @("esxi04.domain.local", "esxi05.domain.local", "esxi06.domain.local", "esxi07.domain.local")
-$vcs01_primary_host = "esxi04.domain.local"
+$VC01_platform_vms = @("PSC01", "VC01")
+$VC01_cluster_hosts = @("esxi04.domain.local", "esxi05.domain.local", "esxi06.domain.local", "esxi07.domain.local")
+$VC01_primary_host = "esxi04.domain.local"
 $esxi_user = "root"
-$esxi_password = "Password123!"
-$vcs02_platform_vms = @("VCS02")
-$vcs02_cluster_hosts = @("esxi01.domain.local", "esxi02.domain.local", "esxi03.domain.local", "esxi08.domain.local")
-$vcs02_primary_host = "esxi01.domain.local"
+$esxi_password = "VMwar3!!"
+$VC02_platform_vms = @("VC02")
+$VC02_cluster_hosts = @("esxi01.domain.local", "esxi02.domain.local", "esxi03.domain.local", "esxi08.domain.local")
+$VC02_primary_host = "esxi01.domain.local"
 $ave_systems = @("ave-01.domain.local")
 
 #Stack PowerUp/PowerDown Paramters
@@ -128,9 +128,9 @@ Function ChangeDRSLevel ($Level)
 						
 Function MoveVMs {
 
-    Foreach ($VM in $vcs01_platform_vms) {
-        Write-Host " Moving $VM to"$vcs01_primary_host": " -Foregroundcolor white -nonewline
-        Get-VM $VM | Move-VM -Destination $vcs01_primary_host -Confirm:$false | Out-Null
+    Foreach ($VM in $VC01_platform_vms) {
+        Write-Host " Moving $VM to"$VC01_primary_host": " -Foregroundcolor white -nonewline
+        Get-VM $VM | Move-VM -Destination $VC01_primary_host -Confirm:$false | Out-Null
         Write-Host "Moved" -Foregroundcolor green
     }   
     Disconnect-VIServer $vcenter_fqdn -confirm:$false | Out-Null
@@ -139,7 +139,7 @@ Function MoveVMs {
 # Function to put all ESXi hosts into maintenance mode with the No Action flag for vSAN data rebuilds
 Function EnterMaintenanceMode {
 
-    Foreach ($VMHost in $vcs01_cluster_hosts) {
+    Foreach ($VMHost in $VC01_cluster_hosts) {
         Connect-VIServer $VMHost -User $esxi_user -Password $esxi_password | Out-Null
         Write-Host " Putting $VMHost into Maintenance Mode: " -Foregroundcolor white -nonewline
         Get-View -ViewType HostSystem -Filter @{"Name" = $VMHost }|?{!$_.Runtime.InMaintenanceMode}|%{$_.EnterMaintenanceMode(0, $false, (new-object VMware.Vim.HostMaintenanceSpec -Property @{vsanMode=(new-object VMware.Vim.VsanHostDecommissionMode -Property @{objectAction=[VMware.Vim.VsanHostDecommissionModeObjectAction]::NoAction})}))}
@@ -151,7 +151,7 @@ Function EnterMaintenanceMode {
 # Function to Exit hosts from maintenance mode
 Function ExitMaintenanceMode {
 
-    Foreach ($VMHost in $vcs01_cluster_hosts) 
+    Foreach ($VMHost in $VC01_cluster_hosts) 
 	{
         Connect-VIServer $VMHost -User $esxi_user -Password $esxi_password | Out-Null
         Write-Host " Exiting Maintenance Mode for"$VMHost": " -Foregroundcolor white -nonewline
@@ -439,7 +439,7 @@ Function Menu
         Write-Host -Object ''	
         Write-Host -Object ' A.  Create DC01 Snapshot (enable full reset of environment) '
         Write-Host -Object ''
-        Write-Host -Object ' B.  Start VCS01 vSAN cluster & PSC/vCenter '
+        Write-Host -Object ' B.  Start VC01 vSAN cluster & PSC/vCenter '
         Write-Host -Object ''
 		Write-Host -Object ' C.  Start All Primary VRS Stack VMs '
         Write-Host -Object ''
@@ -447,13 +447,13 @@ Function Menu
         Write-Host -Object ''
         Write-Host -Object ' Shutdown Sequence:' -Foregroundcolor cyan
 		Write-Host -Object ''
-        Write-Host -Object ' E.  Shutdown VCS02 Hosts (and vCenter) '
+        Write-Host -Object ' E.  Shutdown VC02 Hosts (and vCenter) '
         Write-Host -Object ''
 		Write-Host -Object ' F.  Shutdown DPA (gracefully) and Cloudlink (only required if they are started) '
         Write-Host -Object ''
 		Write-Host -Object ' G.  Shutdown All Primary VRS Stack VMs '
         Write-Host -Object ''
-		Write-Host -Object ' H.  Shutdown VCS01 vSAN cluster & PSC/vCenter '
+		Write-Host -Object ' H.  Shutdown VC01 vSAN cluster & PSC/vCenter '
 		Write-Host -Object ''
 		Write-Host -Object ' I.  Shutdown AVE(s) gracefully. Required to avoid AVE corruption '
         Write-Host -Object ''
@@ -500,13 +500,13 @@ Function Menu
             B 
             { 
 				Write-Host ''
-				Write-Host " Starting VCS01 Hosts and Platform VMs" -Foregroundcolor yellow
+				Write-Host " Starting VC01 Hosts and Platform VMs" -Foregroundcolor yellow
 				Write-Host " **************************************" -Foregroundcolor yellow
 				ExitMaintenanceMode
-                ConnectVIServer $vcs01_primary_host $esxi_user $esxi_password
-                StartVMs $vcs01_platform_vms
+                ConnectVIServer $VC01_primary_host $esxi_user $esxi_password
+                StartVMs $VC01_platform_vms
 				PollvCenter
-				DisconnectVIServer $vcs01_primary_host
+				DisconnectVIServer $VC01_primary_host
 				anyKey
             }
 			C 
@@ -552,9 +552,9 @@ Function Menu
 			E 
             {
                 Write-Host ''
-                Write-Host " Shutting down VCS02 and Hosts" -Foregroundcolor yellow
+                Write-Host " Shutting down VC02 and Hosts" -Foregroundcolor yellow
                 Write-Host " ******************************" -Foregroundcolor yellow
-                ShutdownESXiHosts $vcs02_cluster_hosts
+                ShutdownESXiHosts $VC02_cluster_hosts
                 anyKey
             }
 			F 
@@ -587,13 +587,13 @@ Function Menu
             H
             {
                 Write-Host ''
-				Write-Host " Shutting down VCS01 Platform VMs and Hosts" -Foregroundcolor yellow
+				Write-Host " Shutting down VC01 Platform VMs and Hosts" -Foregroundcolor yellow
 				Write-Host " *******************************************" -Foregroundcolor yellow
-				ConnectVIServer $vcs01_primary_host $esxi_user $esxi_password
-                ShutdownVM $vcs01_platform_vms
-                DisconnectVIServer $vcs01_primary_host
+				ConnectVIServer $VC01_primary_host $esxi_user $esxi_password
+                ShutdownVM $VC01_platform_vms
+                DisconnectVIServer $VC01_primary_host
 				EnterMaintenanceMode
-				ShutdownESXiHosts $vcs01_cluster_hosts
+				ShutdownESXiHosts $VC01_cluster_hosts
 				anyKey
             }
 			I 
