@@ -855,7 +855,7 @@ elseif ($restore)
                             LogMessage -message "Tearing down DRS Rule $($rule.name)"
                             Remove-DrsRule $drsRule -confirm:$false| Out-Null
                         }
-                        LogMessage -message "Recreating DRS Rule `"$($rule.name)`"   including restored VM $($restoredVM.name)"
+                        LogMessage -message "Recreating DRS Rule `"$($rule.name)`" including restored VM $($restoredVM.name)"
                         New-DrsRule -cluster $retrievedCluster -name $rule.name -VM $vms -keepTogether $rule.keepTogether -Enabled $true | Out-Null
                     }
                     else 
