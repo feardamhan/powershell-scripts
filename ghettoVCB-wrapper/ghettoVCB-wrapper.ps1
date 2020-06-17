@@ -23,6 +23,10 @@
     .EXAMPLE
         PS C:\> ghettoVCB-wrapper.ps1 -restore -vm vmname -esxihost myhost01.mydomain.local -esxiRootPassword MyLovelyEsxiPa$$w0rd
         Restores both the VM and the OVF properties on specified host
+
+    .NOTES
+        DISCLAIMER: This script it provided for educational purposes. It it is provided without warranty. Please test thoroughly
+        before use
 #>
 
 Param(
