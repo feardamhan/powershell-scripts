@@ -4,14 +4,15 @@
     .Created By:    Ken Gould
     .Group:         HCI BU
     .Organization:  VMware, Inc.
-    .Version:       1.0 (Build 001)
+    .Version:       1.1 (Build 001)
     .Date:          2020-06-17
     ===============================================================================================================
     .CREDITS
     - William Lam - for base of LogMessage Function
     ===============================================================================================================
     .CHANGE_LOG
-    - 1.0.000 (Ken Gould / 2020-06-17) - Initial script creation
+    - 1.1.001   Added Ability to select restore
+    - 1.0.001   (Ken Gould / 2020-06-17) - Initial script creation
     ===============================================================================================================
     .DESCRIPTION
         This script helps automate capturing and restoring both a VM via ghettoVCB and also the extra information
@@ -23,16 +24,15 @@
     .EXAMPLE
         PS C:\> ghettoVCB-wrapper.ps1 -restore -vm vmname -esxihost myhost01.mydomain.local -esxiRootPassword MyLovelyEsxiPa$$w0rd
         Restores both the VM and the OVF properties on specified host
-
+    
     .NOTES
-        DISCLAIMER: This script it provided for educational purposes. It it is provided without warranty. Please test thoroughly
-        before use
+        Made available with no warranty. Please test before use. 
 #>
 
 Param(
     [Parameter(mandatory=$true)]
     [String]$vm,
-    [Parameter(mandatory=$true)]
+    [Parameter(mandatory=$false)]
     [String]$esxiRootPassword,    
     [Parameter(mandatory=$false)]
     [Switch]$backup,
@@ -685,31 +685,40 @@ Function New-VMRestore
             $backupImage = $output.output
             If ($backupImage)
             {
-                LogMessage -message "Backup Found: $backupImage"
-                $createRestoreFile = "rm -f ./$vm.rf; echo `'`"/vmfs/volumes/$backupLocation/$vm/$backupImage;/vmfs/volumes/$targetDatastore;3`"`' >$vm.rf"
-                LogMessage -message "Creating Restore File for $vm"
-                $createdFile = Invoke-SshCommand -session $session.sessionid -command $createRestoreFile
-                $restoreCommand = "/opt/ghettovcb/bin/ghettoVCB-restore.sh -c $vm.rf"
-                LogMessage -message "Initating Restore Process for $vm from backup $backupImage"
-                $result = Invoke-SshCommand -timeout 7200 -session $session.sessionid -command $restoreCommand
-                LogMessage -message "Restore complete. Checking Result."
-                If ($result.output -like "*################## Completed restore for $vm`! #####################*")
+                $chosenBackup =  $backupImage | Out-Gridview -Title "Select the Backup you wish to Restore from:" -OutputMode Single
+                If ($chosenBackup)
                 {
-                    LogMessage -message "Log reports successful restore of $vm"
-                }
-                else
-                {
-                    LogMessage -message "Please check log as log reports that restore of $vm did not successfully complete" -colour Red    
-                }
-                LogMessage -message "Adding output to log file $logFile"
+                    LogMessage -message "Backup Chosen: $chosenBackup"
+                    $createRestoreFile = "rm -f ./$vm.rf; echo `'`"/vmfs/volumes/$backupLocation/$vm/$chosenBackup;/vmfs/volumes/$targetDatastore;3`"`' >$vm.rf"
+                    LogMessage -message "Creating Restore File for $vm"
+                    $createdFile = Invoke-SshCommand -session $session.sessionid -command $createRestoreFile
+                    $restoreCommand = "/opt/ghettovcb/bin/ghettoVCB-restore.sh -c $vm.rf"
+                    LogMessage -message "Initating Restore Process for $vm from backup $chosenBackup"
+                    $result = Invoke-SshCommand -timeout 7200 -session $session.sessionid -command $restoreCommand
+                    LogMessage -message "Restore complete. Checking Result."
+                    If ($result.output -like "*################## Completed restore for $vm`! #####################*")
+                    {
+                        LogMessage -message "Log reports successful restore of $vm"
+                    }
+                    else
+                    {
+                        LogMessage -message "Please check log as log reports that restore of $vm did not successfully complete" -colour Red    
+                    }
+                    LogMessage -message "Adding output to log file $logFile"
 
-                $result.output | Out-File $logFile -encoding ASCII -append
-                Get-SSHSession | Remove-SSHSession | Out-Null
+                    $result.output | Out-File $logFile -encoding ASCII -append
+                    Get-SSHSession | Remove-SSHSession | Out-Null
+                }
+                else 
+                {
+                    LogMessage -message "You didn't you select a backup. Please re-run and try again" -colour magenta
+                    tidyUpandExit
+                }
             }
             else 
             {
                 LogMessage -message "No backup was found for $vm" -colour red
-                Write-Host "";Exit   
+                tidyUpandExit   
             }
         }
         else 
@@ -724,9 +733,14 @@ Function New-VMRestore
     }
 }
 
+Function tidyUpandExit
+{
+    Get-SSHSession | Remove-SSHSession | Out-Null
+    Write-Host "";Exit
+
+}
+
 #Execution
-
-
 Clear
 
 
@@ -752,13 +766,13 @@ If ($backup)
         else 
         {
             LogMessage -message "Could not locate the requested VM name. Please confirm and try again" -colour red
-            Write-Host "";Exit
+            tidyUpandExit
         }        
     }
     else
     {
         LogMessage -message "You must supply the -quiesce option with desired value" -colour red
-        Write-Host "";Exit
+        tidyUpandExit
     }
 }
 elseif ($restore)
@@ -855,7 +869,7 @@ elseif ($restore)
                             LogMessage -message "Tearing down DRS Rule $($rule.name)"
                             Remove-DrsRule $drsRule -confirm:$false| Out-Null
                         }
-                        LogMessage -message "Recreating DRS Rule `"$($rule.name)`" including restored VM $($restoredVM.name)"
+                        LogMessage -message "Recreating DRS Rule `"$($rule.name)`"   including restored VM $($restoredVM.name)"
                         New-DrsRule -cluster $retrievedCluster -name $rule.name -VM $vms -keepTogether $rule.keepTogether -Enabled $true | Out-Null
                     }
                     else 
