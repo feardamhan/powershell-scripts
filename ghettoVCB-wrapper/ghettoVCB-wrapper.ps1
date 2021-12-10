@@ -4,7 +4,7 @@
     .Created By:    Ken Gould
     .Group:         HCI BU
     .Organization:  VMware, Inc.
-    .Version:       1.1 (Build 001)
+    .Version:       1.1 (Build 002)
     .Date:          2020-06-17
     ===============================================================================================================
     .CREDITS
@@ -181,7 +181,7 @@ Function Get-VMvAppConfig
         [PSObject]$vm
         )
     $targetFile = $psscriptRoot + "\" + $vm.name + "-property-backup.json"
-    LogMessage -message "Initating Backup of OVF Properties" -colour yellow
+    LogMessage -message "Initiating Backup of OVF Properties" -colour yellow
     Try
     {
         If ($vm.ExtensionData.Config.VAppConfig)
@@ -219,7 +219,7 @@ Function Get-VMLocations
         [PSObject]$vm
         )
     $targetFile = $psscriptRoot + "\" + $vm.name + "-location-backup.json"
-    LogMessage -message "Initating Backup of Inventory Location Settings" -colour yellow
+    LogMessage -message "Initiating Backup of Inventory Location Settings" -colour yellow
 
     Try
     {
@@ -256,7 +256,7 @@ Function Get-DRSGroupsAndRules
         [PSObject]$vm
         )
     $targetFile = $psscriptRoot + "\" + $vm.name + "-drs-settings-backup.json"
-    LogMessage -message "Initating Backup of DRS Group Settings" -colour yellow
+    LogMessage -message "Initiating Backup of DRS Group Settings" -colour yellow
 
     Try
     {
@@ -269,7 +269,7 @@ Function Get-DRSGroupsAndRules
             }
         }
 
-        $retrievedVmID = (get-vm -name xreg-wsa01c).id
+        $retrievedVmID = (get-vm -name $vm).id
         $retrievedCluster = (Get-VMHost -name $($vm.VMHost.name)).parent.name
         $retrievedDrsRules = (Get-DrsRule -Cluster $retrievedCluster | Where-Object {$_.vmids -like $($vm.id)})
         $vmDrsRules = @()
@@ -612,7 +612,7 @@ function New-VMBackup
             If ($session)
             {
                 #start backup
-                LogMessage -message "Initating Backup of $vm on $esxiHost" -colour yellow
+                LogMessage -message "Initiating Backup of $vm on $esxiHost" -colour yellow
                 $result = Invoke-SshCommand -timeout 7200 -session $session.sessionid -command $myCommand
                 LogMessage -message "Backup finished. Checking Result."
                 If ($result.output -like "*###### Final status: All VMs backed up OK! ######*")
@@ -693,7 +693,7 @@ Function New-VMRestore
                     LogMessage -message "Creating Restore File for $vm"
                     $createdFile = Invoke-SshCommand -session $session.sessionid -command $createRestoreFile
                     $restoreCommand = "/opt/ghettovcb/bin/ghettoVCB-restore.sh -c $vm.rf"
-                    LogMessage -message "Initating Restore Process for $vm from backup $chosenBackup"
+                    LogMessage -message "Initiating Restore Process for $vm from backup $chosenBackup"
                     $result = Invoke-SshCommand -timeout 7200 -session $session.sessionid -command $restoreCommand
                     LogMessage -message "Restore complete. Checking Result."
                     If ($result.output -like "*################## Completed restore for $vm`! #####################*")
